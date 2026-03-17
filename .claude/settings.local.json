@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(java -version)",
+      "Bash(mvn -version)"
+    ]
+  }
+}
