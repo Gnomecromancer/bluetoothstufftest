@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Chat Room</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #1a73e8;
+      --blue-d: #1558b0;
+      --red:    #c5221f;
+      --header: 52px;
+    }
+
+    html, body {
+      height: 100dvh;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      background: #f0f2f5;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--blue);
+      color: white;
+      padding: 0 16px;
+      padding-top: env(safe-area-inset-top);
+      height: calc(var(--header) + env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 17px; font-weight: 600; flex: 1; }
+    #online-count {
+      font-size: 12px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 2px 9px;
+    }
+    #conn-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      transition: background 0.3s;
+    }
+    #conn-dot.on { background: #4caf50; }
+
+    /* ── Join screen ── */
+    #join-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #join-box {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    #join-box h2 { font-size: 20px; color: #333; }
+    #join-box p  { font-size: 13px; color: #888; line-height: 1.6; }
+    #join-name {
+      padding: 11px 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      width: 100%;
+    }
+    #join-name:focus { outline: none; border-color: var(--blue); }
+
+    /* ── Chat screen ── */
+    #chat-screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      max-width: 75%;
+    }
+    .msg.me     { align-self: flex-end;   align-items: flex-end; }
+    .msg.them   { align-self: flex-start; align-items: flex-start; }
+    .msg.system { align-self: center;     align-items: center; max-width: 100%; }
+
+    .msg-name { font-size: 11px; color: #999; margin-bottom: 2px; padding: 0 4px; }
+    .msg-bubble {
+      padding: 9px 13px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .msg.me   .msg-bubble { background: var(--blue); color: white; border-bottom-right-radius: 5px; }
+    .msg.them .msg-bubble { background: white; color: #222; border-bottom-left-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+    .msg.system .msg-bubble { background: none; color: #bbb; font-size: 12px; font-style: italic; }
+
+    #input-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      background: white;
+      border-top: 1px solid #eee;
+      flex-shrink: 0;
+    }
+    #msg-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 22px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #f8f8f8;
+    }
+    #msg-input:focus { outline: none; border-color: var(--blue); background: white; }
+    #send-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--blue);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      touch-action: manipulation;
+      transition: background 0.15s;
+    }
+    #send-btn:active { background: var(--blue-d); }
+    #send-btn svg { width: 20px; height: 20px; fill: white; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 11px 16px;
+      border: none; border-radius: 9px;
+      cursor: pointer; font-size: 14px; font-weight: 500;
+      touch-action: manipulation; transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-primary:active { background: var(--blue-d); }
+    .btn-ghost { background: none; border: none; color: var(--red); font-size: 12px; cursor: pointer; touch-action: manipulation; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div id="conn-dot"></div>
+  <h1>Chat Room</h1>
+  <span id="online-count" style="display:none"></span>
+  <button class="btn-ghost" id="leave-btn" style="display:none">Leave</button>
+</header>
+
+<div id="join-screen">
+  <div id="join-box">
+    <h2>Join the Room</h2>
+    <p>Anyone on the same network (or using the same URL) can join. No internet required if self-hosted.</p>
+    <input type="text" id="join-name" placeholder="Your name…" maxlength="32" autocomplete="off" />
+    <button class="btn btn-primary" id="join-btn">Join</button>
+  </div>
+</div>
+
+<div id="chat-screen">
+  <div id="messages"></div>
+  <div id="input-bar">
+    <input type="text" id="msg-input" placeholder="Message…" maxlength="1000" autocomplete="off" />
+    <button id="send-btn">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+let ws     = null;
+let myName = null;
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addMessage(type, text, name) {
+  const msgs = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${type}`;
+
+  if (type === 'them') {
+    wrap.innerHTML = `<div class="msg-name">${escHtml(name)}</div>
+      <div class="msg-bubble">${escHtml(text)}</div>`;
+  } else if (type === 'system') {
+    wrap.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+  }
+
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function setOnline(count) {
+  const el = document.getElementById('online-count');
+  el.textContent = `${count} online`;
+  el.style.display = '';
+}
+
+function join() {
+  const nameInput = document.getElementById('join-name');
+  myName = nameInput.value.trim() || 'Anonymous';
+
+  document.getElementById('join-screen').style.display = 'none';
+  document.getElementById('chat-screen').style.display = 'flex';
+  document.getElementById('leave-btn').style.display = '';
+  document.getElementById('msg-input').focus();
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}`);
+
+  ws.addEventListener('open', () => {
+    ws.send(JSON.stringify({ type: 'join', name: myName }));
+    document.getElementById('conn-dot').classList.add('on');
+  });
+
+  ws.addEventListener('message', (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'users') {
+      setOnline(msg.users.length);
+      addMessage('system', `You joined as "${myName}". ${msg.users.length} user(s) in room.`);
+    } else if (msg.type === 'chat') {
+      addMessage(msg.name === myName ? 'me' : 'them', msg.text, msg.name);
+    } else if (msg.type === 'joined') {
+      addMessage('system', `${msg.name} joined`);
+    } else if (msg.type === 'left') {
+      addMessage('system', `${msg.name} left`);
+    } else if (msg.type === 'renamed') {
+      addMessage('system', `${msg.oldName} is now ${msg.newName}`);
+    }
+    // Update user count from any event
+    if (msg.users) setOnline(msg.users.length);
+  });
+
+  ws.addEventListener('close', () => {
+    document.getElementById('conn-dot').classList.remove('on');
+    addMessage('system', 'Disconnected.');
+  });
+
+  ws.addEventListener('error', () => {
+    addMessage('system', 'Connection error.');
+  });
+}
+
+function send() {
+  const input = document.getElementById('msg-input');
+  const text  = input.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: 'chat', text }));
+  input.value = '';
+}
+
+function leave() {
+  if (ws) ws.close();
+  ws = null; myName = null;
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('online-count').style.display = 'none';
+  document.getElementById('leave-btn').style.display = 'none';
+  document.getElementById('conn-dot').classList.remove('on');
+  document.getElementById('chat-screen').style.display = 'none';
+  document.getElementById('join-screen').style.display = 'flex';
+}
+
+document.getElementById('join-btn').addEventListener('click', join);
+document.getElementById('join-name').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+document.getElementById('send-btn').addEventListener('click', send);
+document.getElementById('msg-input').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+document.getElementById('leave-btn').addEventListener('click', leave);
+</script>
+</body>
+</html>
